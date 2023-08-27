@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.title}}</title>
+  </head>
+  <body style="display: flex;flex-direction: column; justify-content: center; align-items: center; width: 100vw; height: 100vh;">
+    <h1>{{.title}}</h1>
+    {{if .notes}}
+    <table>
+      <th>
+        <tr>
+          <td>ID</td>
+          <td>Notes</td>
+          <td>Completed?</td>
+          <td>Action</td>
+        </tr>
+      </th>
+      <tbody id="note-list">
+        {{ range .notes }}
+        <tr data-id="{{.ID}}">
+          <td>{{ .ID }}</td>
+          <td>
+            <input type="text" name="todo-item" value="{{.Text}}" />
+            <div  class="todo-item" style="display:none;">{{.Text}}</div>
+          </td>
+          <td class="completion">{{ .IsCompleted }}</td>
+          <td><button class="edit">Edit</button><button class="delete">Delete</button><button class="completeBtn">Completed</button></td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    {{else}}
+    <h1>No notes</h1>
+    {{end}}
+    <form>
+      <input type="text" name="todo" />
+      <button type="submit">Submit</button>
+    </form>
+  </body>
+  <script>
+    const inputForm = document.querySelector("form");
+    const deleteBtn=document.querySelectorAll('.delete')
+    const editBtn=document.querySelectorAll('.edit')
+    const completeBtn=document.querySelectorAll('.completeBtn')
+
+    completeBtn.forEach((node)=>node.addEventListener('click',(evt)=>{
+        const targetNode=evt.target.parentNode.parentNode
+        const text=evt.target.parentNode.parentNode.querySelector('.todo-item').innerText
+        const isCompleted=targetNode.querySelector('.completion').innerText==='true'
+        console.log(isCompleted)
+
+        const dataId=targetNode.getAttribute('data-id')
+        fetch(`/notes/${dataId}`,{
+            method:'PUT',
+            body:JSON.stringify({isCompleted:!isCompleted,text})
+        }).then((res)=>{
+            
+            if(res.ok)targetNode.querySelector('td.completion').innerText=!isCompleted
+        })
+    }))
+    editBtn.forEach((node)=>node.addEventListener('click',(evt)=>{
+        const targetNode=evt.target.parentNode.parentNode
+        const text=evt.target.parentNode.parentNode.querySelector('input[name="todo-item"]').value
+        const isCompleted=targetNode.querySelector('.completion').innerText==='true'
+
+        const dataId=targetNode.getAttribute('data-id')
+        fetch(`/notes/${dataId}`,{
+            method:'PUT',
+            body:JSON.stringify({isCompleted:isCompleted,text})
+        }).then((res)=>{
+            
+            // if(res.ok)targetNode.querySelector('td.completion').innerText=!isCompleted
+        })
+    }))
+    deleteBtn.forEach((node)=>node.addEventListener('click',(evt)=>{
+        const targetNode=evt.target.parentNode.parentNode
+
+        const dataId=targetNode.getAttribute('data-id')
+        fetch(`/notes/${dataId}`,{
+            method:'DELETE'
+        }).then((res)=>{
+            
+            if(res.ok)targetNode.remove()
+        })
+
+    }))
+    inputForm.addEventListener("submit", (evt) => {
+      evt.preventDefault();
+      fetch("/notes", {
+        method: "POST",
+        body: JSON.stringify({ text: document.querySelector("input[name=todo]").value }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log(data);
+          const newNote=document.createElement('tr')
+          const idCell=document.createElement('td')
+          idCell.innerText=data.data.id.toString()
+        
+
+          const completedCell=document.createElement('td')
+           completedCell.className="completion"
+          completedCell.innerText=data.data.isCompleted.toString()
+          const actionCell=document.createElement('td')
+            actionCell.innerHTML='<button class="edit">Edit</button><button class="delete">Delete</button><button class="completeBtn">Completed</button>'
+           actionCell.querySelector('.delete').addEventListener('click',(evt)=>{
+        const targetNode=evt.target.parentNode.parentNode
+
+        const dataId=targetNode.getAttribute('data-id')
+        fetch(`/notes/${dataId}`,{
+            method:'DELETE'
+        }).then((res)=>{
+            
+            if(res.ok)targetNode.remove()
+        })
+
+    })
+    const editBtn=actionCell.querySelector('.edit').addEventListener('click',(evt)=>{
+        const targetNode=evt.target.parentNode.parentNode
+        const text=evt.target.parentNode.parentNode.querySelector('input[name="todo-item"]').value
+        const isCompleted=targetNode.querySelector('.completion').innerText==='true'
+
+        const dataId=targetNode.getAttribute('data-id')
+        fetch(`/notes/${dataId}`,{
+            method:'PUT',
+            body:JSON.stringify({isCompleted:isCompleted,text})
+        }).then((res)=>{
+            
+        })
+    })
+    actionCell.querySelector('.completeBtn').addEventListener('click',(evt)=>{
+        const targetNode=evt.target.parentNode.parentNode
+        const text=evt.target.parentNode.parentNode.querySelector('.todo-item').innerText
+        const isCompleted=targetNode.querySelector('.completion').innerText==='true'
+        console.log(isCompleted)
+
+        const dataId=targetNode.getAttribute('data-id')
+        fetch(`/notes/${dataId}`,{
+            method:'PUT',
+            body:JSON.stringify({isCompleted:!isCompleted,text})
+        }).then((res)=>{
+            
+            if(res.ok)targetNode.querySelector('td.completion').innerText=!isCompleted
+        })
+    })
+
+          newNote.setAttribute("data-id",data.data.id)
+          newNote.appendChild(idCell)
+          const textCell=document.createElement('td')
+          newNote.appendChild(textCell)
+          const textInput=document.createElement('input')
+          textInput.setAttribute('type','text')
+          textInput.setAttribute('name','todo-item')
+          textInput.value=data.data.text
+          const hiddenTxt=document.createElement('div')
+          hiddenTxt.className='todo-item'
+          hiddenTxt.style="display:none;"
+          textCell.appendChild(textInput)
+          textCell.appendChild(hiddenTxt)
+
+          newNote.appendChild(completedCell)
+          newNote.appendChild(actionCell)
+
+          const table = document.getElementById("note-list");
+          document.getElementById("note-list").appendChild(newNote);
+        });
+    });
+  </script>
+</html>
